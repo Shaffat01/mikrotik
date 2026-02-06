@@ -1,0 +1,93 @@
+{% extends "layout.html" %}
+
+{% block title %}Interface List - MikroTik Pro{% endblock %}
+
+{% block content %}
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold">Interface List</h2>
+            <span class="badge bg-primary">Connected: {{ session['target_ip'] }}</span>
+        </div>
+
+        <div class="card p-0 overflow-hidden">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th> 
+                        <th>Name</th> <th>Type</th>
+                        <th>RX (Download)</th>
+                        <th>TX (Upload)</th>
+                        <th>Status</th>
+                        <th class="text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for iface in interfaces %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td><strong>{{ iface['name'] }}</strong></td>
+                        
+                        <td class="text-muted small">{{ iface['type'] }}</td>
+                        
+                        <td>
+                            <span class="badge bg-info text-dark speed-rx" data-name="{{ iface['name'] }}">
+                                ↓ {{ iface['rx_total'] if iface['rx_total'] else '0 bps' }}
+                            </span>
+                        </td>
+                        
+                        <td>
+                            <span class="badge bg-success speed-tx" data-name="{{ iface['name'] }}">
+                                ↑ {{ iface['tx_total'] if iface['tx_total'] else '0 bps' }}
+                            </span>
+                        </td>
+
+                        <td>
+                            {% if iface['disabled'] == 'false' or iface['disabled'] == False or iface['disabled'] == 'no' %}
+                                <span class="badge bg-success">Enabled</span>
+                            {% else %}
+                                <span class="badge bg-danger">Disabled</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-center">
+                            <div class="d-flex justify-content-center gap-2">
+                                {% if iface['disabled'] == 'false' or iface['disabled'] == False or iface['disabled'] == 'no' %}
+                                    <a href="{{ url_for('disable_interface', name=iface['.id']) }}" class="btn btn-sm btn-warning">
+                                        <i class="fas fa-pause me-1"></i> Disable
+                                    </a>
+                                {% else %}
+                                    <a href="{{ url_for('enable_interface', name=iface['.id']) }}" class="btn btn-sm btn-success">
+                                        <i class="fas fa-play me-1"></i> Enable
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+{% endblock %}
+
+{% block scripts %}
+
+    <script>
+        function updateLiveTraffic() {
+            document.querySelectorAll('.speed-tx').forEach(txSpan => {
+                const ifaceName = txSpan.getAttribute('data-name');
+                const rxSpan = document.querySelector(`.speed-rx[data-name="${ifaceName}"]`);
+
+                fetch(`/mikrotik/interface-traffic/${ifaceName}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        txSpan.innerHTML = `↑ ${data.tx || '0 bps'}`;
+                        rxSpan.innerHTML = `↓ ${data.rx || '0 bps'}`;
+                    })
+                    .catch(err => {
+                        txSpan.innerHTML = `↑ 0 bps`;
+                        rxSpan.innerHTML = `↓ 0 bps`;
+                    });
+        }
+        setInterval(updateLiveTraffic, 3000);
+        updateLiveTraffic();
+    </script>
+{% endblock %}

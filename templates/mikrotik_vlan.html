@@ -1,0 +1,144 @@
+{% extends "layout.html" %}
+
+{% block title %}VLAN Management - MikroTik Pro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold">VLAN Management</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addVlanModal">
+        <i class="fas fa-plus me-1"></i> Add New VLAN
+    </button>
+</div>
+
+<div class="card border-0 shadow-sm overflow-hidden">
+    <table class="table table-hover mb-0">
+        <thead class="table-dark">
+            <tr>
+                <th>Name</th>
+                <th>VLAN ID</th>
+                <th>Interface</th>
+                <th>MTU</th>
+                <th class="text-center">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for vlan in vlans %}
+            <tr>
+                <td><strong>{{ vlan['name'] }}</strong></td>
+                <td><span class="badge bg-secondary">{{ vlan['vlan-id'] }}</span></td>
+                <td>{{ vlan['interface'] }}</td>
+                <td>{{ vlan['mtu'] }}</td>
+                <td class="text-center">
+                    <div class="d-flex justify-content-center gap-2">
+                        <button class="btn btn-sm btn-outline-info" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#editVlanModal" 
+                                onclick="populateVlanModal('{{ vlan['.id'] }}', '{{ vlan['name'] }}', '{{ vlan['vlan-id'] }}', '{{ vlan['interface'] }}', '{{ vlan['mtu'] }}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+
+                        <a href="{{ url_for('delete_vlan', id=vlan['.id']) }}" 
+                           class="btn btn-sm btn-outline-danger" 
+                           onclick="return confirm('Are you sure?')">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                    </div>
+                </td>
+
+                <div class="modal fade" id="editVlanModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header bg-info text-white">
+                                <h5 class="modal-title">Edit VLAN Settings</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form action="/mikrotik/networks/vlan/edit" method="POST">
+                                <div class="modal-body">
+                                    <input type="hidden" name="vlan_id_internal" id="edit_vlan_internal_id">
+                                    <div class="mb-3">
+                                        <label class="form-label">VLAN Name</label>
+                                        <input type="text" name="name" id="edit_vlan_name" class="form-control" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">VLAN ID</label>
+                                        <input type="number" name="vlan_id" id="edit_vlan_tag" class="form-control" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Parent Interface</label>
+                                        <select name="interface" id="edit_vlan_interface" class="form-select" required>
+                                            {% for iface in interfaces %}
+                                                <option value="{{ iface['name'] }}">{{ iface['name'] }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">MTU</label>
+                                        <input type="number" name="mtu" id="edit_vlan_mtu" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-info text-white">Update VLAN</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" class="text-center py-4 text-muted">No VLAN found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="modal fade" id="addVlanModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New VLAN</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/mikrotik/networks/vlan/add" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">VLAN Name</label>
+                        <input type="text" name="name" class="form-control" placeholder="vlan10_office" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">VLAN ID (1-4094)</label>
+                        <input type="number" name="vlan_id" class="form-control" placeholder="10" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Parent Interface</label>
+                        <select name="interface" class="form-select" required>
+                            {% for iface in interfaces %}
+                                <option value="{{ iface['name'] }}">{{ iface['name'] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create VLAN</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function populateVlanModal(id, name, vlan_id, interface, mtu) {
+        document.getElementById('edit_vlan_internal_id').value = id;
+        document.getElementById('edit_vlan_name').value = name;
+        document.getElementById('edit_vlan_tag').value = vlan_id;
+        document.getElementById('edit_vlan_interface').value = interface;
+        document.getElementById('edit_vlan_mtu').value = mtu || 1500;
+        console.log("Loading VLAN:", name, "ID:", vlan_id);
+    }
+</script>
+{% endblock %}

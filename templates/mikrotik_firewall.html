@@ -1,0 +1,145 @@
+{% extends "layout.html" %}
+
+{% block title %}Interface List - MikroTik Pro{% endblock %}
+
+{% block content %}
+
+    <div class="main-content">
+        <h2 class="mb-4">Firewall Management</h2>
+
+        <ul class="nav nav-tabs mb-4" id="firewallTabs" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" id="address-tab" data-bs-toggle="tab" data-bs-target="#address-list" type="button">Address List</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="nat-tab" data-bs-toggle="tab" data-bs-target="#nat-rules" type="button">NAT Rules</button>
+            </li>
+        </ul>
+
+        <div class="tab-pane fade show active" id="address-list">
+            <div class="d-flex justify-content-between mb-3">
+                <h4>IP Address List</h4>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addIpModal">+ Block IP</button>
+            </div>
+            <div class="card border-0 shadow-sm">
+                <table class="table mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>#</th> <th>List Name</th>
+                            <th>IP Address</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for addr in addresses %}
+                        <tr>
+                            <td>{{ loop.index }}</td> <td>{{ addr['list'] }}</td>
+                            <td><strong>{{ addr['address'] }}</strong></td>
+                            <td>
+                                {% if addr['disabled'] == 'false' or addr['disabled'] == False %}
+                                    <span class="badge bg-danger">Active Block</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form action="/mikrotik/firewall/remove" method="POST" style="display:inline;">
+                                    <input type="hidden" name="id" value="{{ addr['.id'] }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger border-0" onclick="return confirm('Unblock this IP?')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="modal fade" id="addIpModal" tabindex="-1">
+            <div class="modal-dialog">
+                <form class="modal-content" action="/mikrotik/firewall/add" method="POST">
+                    <div class="modal-header"><h5>Block User</h5></div>
+                    <div class="modal-body">
+                        <input type="text" name="ip" class="form-control mb-3" placeholder="IP Address (e.g. 192.168.88.10)" required>
+                        <input type="hidden" name="list_name" value="Blocked_Users"> 
+                    </div>
+                    <div class="modal-footer"><button type="submit" class="btn btn-danger">Block Now</button></div>
+                </form>
+            </div>
+        </div>
+
+            <div class="tab-pane fade" id="nat-rules">
+                <div class="d-flex justify-content-between mb-3">
+                    <h4>NAT Rules</h4>
+                    <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addNatModal">+ Add NAT</button>
+                </div>
+                <div class="card border-0 shadow-sm">
+                    <table class="table mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Chain</th>
+                                <th>Out. Interface</th>
+                                <th>Action</th>
+                                <th>Comment</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rule in nat_rules %}
+                            <tr>
+                                <td><span class="badge bg-primary">{{ rule['chain'] }}</span></td>
+                                <td>{{ rule['out-interface'] or 'all' }}</td>
+                                <td><span class="badge bg-info text-dark">{{ rule['action'] }}</span></td>
+                                <td>{{ rule['comment'] or '' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addNatModal" tabindex="-1" aria-labelledby="addNatModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <form class="modal-content" action="/mikrotik/firewall/nat/add" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addNatModalLabel">Create New NAT Rule</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Chain</label>
+                        <select name="chain" class="form-select">
+                            <option value="srcnat">srcnat (Source NAT)</option>
+                            <option value="dstnat">dstnat (Destination NAT)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Out. Interface (WAN)</label>
+                        <input type="text" name="out_interface" class="form-control" placeholder="e.g. ether1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Action</label>
+                        <select name="action" class="form-select">
+                            <option value="masquerade">masquerade</option>
+                            <option value="dst-nat">dst-nat</option>
+                            <option value="accept">accept</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-success">Save NAT Rule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% endblock %}
+
+{% block scripts %}
+
+{% endblock %}

@@ -1,0 +1,123 @@
+{% extends "layout.html" %}
+
+{% block title %}Interface List - MikroTik Pro{% endblock %}
+
+{% block content %}
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3>📍 IP Address Management</h3>
+            <a href="/mikrotik/gui-main" class="btn btn-secondary">Back to Dashboard</a>
+        </div>
+
+        <form action="/mikrotik/add-ip" method="POST" class="row g-3 mb-5 border-bottom pb-4">
+            <div class="col-md-5">
+                <input type="text" name="address" class="form-control" placeholder="Address (e.g. 192.168.10.1/24)" required>
+            </div>
+            <div class="col-md-4">
+                <select name="interface" class="form-select">
+                    {% for iface in interfaces %}
+                        <option value="{{ iface['name'] }}">{{ iface['name'] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100">Add IP</button>
+            </div>
+        </form>
+
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Address</th>
+                    <th>Network</th>
+                    <th>Interface</th>
+                    <th>Status</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ip in ip_addresses %}
+                <tr style="vertical-align: middle;">
+                    <td>{{ loop.index }}</td>
+                    <td><strong>{{ ip['address'] }}</strong></td>
+                    <td>{{ ip['network'] }}</td>
+                    <td><span class="badge bg-info text-dark">{{ ip['interface'] }}</span></td>
+                    <td>
+                        {% if ip['disabled'] == 'false' or ip['disabled'] == False or ip['disabled'] == 'no' %}
+                            <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> Active</span>
+                        {% else %}
+                            <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i> Disabled</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                    <div class="d-flex justify-content-center gap-2">
+                        <button class="btn btn-sm btn-info text-white" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#editIpModal" 
+                                onclick="populateEditModal('{{ ip['.id'] }}', '{{ ip['address'] }}', '{{ ip['interface'] }}')">
+                            <i class="fas fa-edit me-1"></i> Edit
+                        </button>
+
+                        <form action="/mikrotik/toggle-ip" method="POST">
+                            <input type="hidden" name="ip_id" value="{{ ip['.id'] }}">
+                            <input type="hidden" name="current_status" value="{{ ip['disabled'] }}">
+                            {% if ip['disabled'] == 'true' or ip['disabled'] == True or ip['disabled'] == 'yes' %}
+                                <button type="submit" class="btn btn-sm btn-success"><i class="fas fa-play"></i></button>
+                            {% else %}
+                                <button type="submit" class="btn btn-sm btn-warning"><i class="fas fa-pause"></i></button>
+                            {% endif %}
+                        </form>
+
+                        <form action="/mikrotik/delete-ip" method="POST" onsubmit="return confirm('ডিলিট করতে চান?')">
+                            <input type="hidden" name="ip_id" value="{{ ip['.id'] }}">
+                            <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash-alt"></i></button>
+                        </form>
+                    </div>
+                </td>
+
+                <div class="modal fade" id="editIpModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Edit IP Address</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <form action="/mikrotik/edit-ip" method="POST">
+                                <div class="modal-body">
+                                    <input type="hidden" name="ip_id" id="edit_ip_id">
+                                    <div class="mb-3">
+                                        <label class="form-label">Address</label>
+                                        <input type="text" name="address" id="edit_address" class="form-control" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Interface</label>
+                                        <select name="interface" id="edit_interface" class="form-select">
+                                            {% for iface in interfaces %}
+                                                <option value="{{ iface['name'] }}">{{ iface['name'] }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-primary">Update IP</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function populateEditModal(id, address, interface) {
+        document.getElementById('edit_ip_id').value = id;
+        document.getElementById('edit_address').value = address;
+        document.getElementById('edit_interface').value = interface;
+    }
+</script>
+{% endblock %}

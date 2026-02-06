@@ -1,0 +1,168 @@
+{% extends "layout.html" %}
+
+{% block title %}Interface List - MikroTik Pro{% endblock %}
+
+{% block content %}
+    <h2 class="mb-4">System Overview</h2>
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card stat-card shadow-sm p-3">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Model Name</th>
+                            <th>IP Address</th>
+                            <th>CPU</th>
+                            <th>Free Mem</th>
+                            <th>Uptime</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>{{ res['board-name'] }}</strong></td>
+                            <td>{{ session['target_ip'] }}</td>
+                            <td><span class="badge bg-primary">{{ res['cpu-load'] }}%</span></td>
+                            <td>{{ (res['free-memory']|int / 1024 / 1024)|round(1) }} MB</td>
+                            <td>{{ res['uptime'] }}</td>
+                            <td><span class="badge bg-success">Online</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+<!--         <div class="col-md-4">
+            <div class="card stat-card shadow-sm p-3">
+                <h6 class="text-center">Memory Usage</h6>
+                <canvas id="memChart"></canvas>
+            </div>
+        </div> -->
+    </div>
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 text-center p-3">
+                <h6 class="text-muted">Total Interfaces</h6>
+                <h4 class="text-primary"><i class="fas fa-network-wired"></i> {{ interfaces|length }}</h4>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 text-center p-3">
+                <h6 class="text-muted">Active IP Addresses</h6>
+                <h4 class="text-success"><i class="fas fa-check-circle"></i> {{ ip_addresses|length }}</h4>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 text-center p-3">
+                <h6 class="text-muted">Status</h6>
+                <h4 class="text-success"><i class="fas fa-check-circle"></i> Active</h4>
+            </div>
+        </div>
+    </div>
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <small class="text-muted">CPU Load ({{ res['cpu-load'] }}%)</small>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar bg-primary" style="width: {{ res['cpu-load'] }}%"></div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    {% set used_mem = res['total-memory']|int - res['free-memory']|int %}
+                    {% set mem_percent = (used_mem / res['total-memory']|int * 100)|round(0) %}
+                    <small class="text-muted">Memory Used ({{ mem_percent }}%)</small>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar bg-danger" style="width: {{ mem_percent }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white"><strong><i class="fas fa-network-wired me-2"></i> Interface Status</strong></div>
+                <div class="card-body">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for iface in interfaces %}
+                            <tr>
+                                <td>{{ iface['name'] }}</td>
+                                <td class="text-muted small">{{ iface['type'] }}</td>
+                                <td>
+                                    {% if iface['running'] == 'true' or iface['running'] == True %}
+                                        <span class="badge bg-success">Running</span>
+                                    {% elif iface['disabled'] == 'true' or iface['disabled'] == True %}
+                                        <span class="badge bg-danger">Disabled</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Linked</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white"><strong><i class="fas fa-map-marker-alt me-2"></i> IP Status</strong></div>
+                <div class="card-body">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                            <tr>
+                                <th>Address</th>
+                                <th>Interface</th>
+                                <th>State</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ip in ip_addresses %}
+                            <tr>
+                                <td><strong>{{ ip['address'] }}</strong></td>
+                                <td>{{ ip['interface'] }}</td>
+                                <td>
+                                    {% if ip['disabled'] == 'false' or ip['disabled'] == False %}
+                                        <i class="fas fa-circle text-success small"></i> Active
+                                    {% else %}
+                                        <i class="fas fa-circle text-danger small"></i> Off
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('memChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: ['Used', 'Free'],
+            datasets: [{
+                data: [{{ (res['total-memory']|int - res['free-memory']|int) }}, {{ res['free-memory'] }}],
+                backgroundColor: ['#e74c3c', '#2ecc71']
+            }]
+        }
+    });
+</script>
+{% endblock %}
+
